@@ -6,9 +6,9 @@ import {
   isTerminal,
   getContent,
   parse
-} from '../src/parser.js'
+} from '../src/parse.js'
 
-describe('parser', () => {
+describe('parse', () => {
   describe('isTerminal', () => {
     it('should return false for a non terminal token', () => {
       assert.equal(isTerminal({ type: 'some type' }), false)
@@ -25,7 +25,7 @@ describe('parser', () => {
       assert.equal(getContent({ content: 'some content' }), 'some content')
     })
   })
-  describe('parser', () => {
+  describe('parse', () => {
     it('should parse a simple definition', () => {
       assert.deepEqual(parse(tokenize('a = 1')), [
         [{
