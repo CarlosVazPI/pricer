@@ -15,6 +15,9 @@ describe('evaluate', () => {
     it('throws an error when broken factor not at end', () => {
       assert.throws(() => evaluate('a = 1 * + 2 '), { name: 'Error', message: `Expected a factor after the operator. '+' found instead. At 1:8` })
     })
+    it('throws an error input continues', () => {
+      assert.throws(() => evaluate('a = 1 2'), { name: 'Error', message: `Could only parse 3 tokens out of the input 4. Final token at 1:6` })
+    })
   })
   describe('evaluation', () => {
     it('evaluates a trivial value', () => {

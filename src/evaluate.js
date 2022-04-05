@@ -15,7 +15,7 @@ export const evaluate = (inputString, valueHash = {}) => {
   const tokens = tokenize(inputString)
   const [tree, last] = parse(tokens)
   if (last !== tokens.length) {
-    console.error(`Could only parse ${last} tokens out of the input ${tokens.length}`)
+    throw new Error(`Could only parse ${last} tokens out of the input ${tokens.length}. Final token at ${tokens[tokens.length - 1].location.join(':')}`)
   }
   const definitions = tree[0].content.reduce((acc, { content }) => ({ ...acc, [content[0].content]: content[2] }), {})
   const collapser = collapse({
