@@ -1,0 +1,16 @@
+{
+  "name": "pricer",
+  "version": "1.0.0",
+  "description": "JS module to define and evaluate prices",
+  "main": "index.js",
+  "repository": "git@github.com:CarlosVazPI/pricer.git",
+  "author": "Carlos Vazquez Perez-Iñigo <carlosvazquez@carloss-mbp.home>",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "mocha"
+  },
+  "devDependencies": {
+    "mocha": "^9.2.2"
+  }
+}
