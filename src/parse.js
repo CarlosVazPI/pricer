@@ -1,82 +1,53 @@
 const empty = []
 const error = [Symbol('error')]
 const isError = ([node]) => node === error
-const concat = (...rules) => {
-  const f = (input, index = 0) => {
-    const result = []
-    for (let rule of rules) {
-      const output = rule(input, index)
-      if (isError(output)) return [error, index]
-      index = output[1]
-      result.push(...output[0])
-    }
-    return [result, index]
+const concat = (...rules) => (input, index = 0) => {
+  const result = []
+  for (let rule of rules) {
+    const output = rule(input, index)
+    if (isError(output)) return [error, index]
+    index = output[1]
+    result.push(...output[0])
   }
-  f.key = rules.map(rule => rule.key).join(' ')
-  return f
+  return [result, index]
 }
-const disjunction = (...rules) => {
-  const f = (input, index = 0) => {
-    for (let rule of rules) {
-      const output = rule(input, index)
-      if (!isError(output)) return output
-    }
-    return [error, index]
-  }
-  f.key = rules.map(rule => rule.key).join(' | ')
-  return f
-}
-const closure = rule => {
-  const f = (input, index = 0) => {
-    const result = []
-    do {
-      const output = rule(input, index)
-      if (isError(output)) return [result, index]
-      index = output[1]
-      result.push(...output[0])
-    } while (true)
-    return [result, index]
-  }
-  f.key = `{ ${rule.key} }`
-  return f
-}
-const option = rule => {
-  const f = (input, index = 0) => {
+const disjunction = (...rules) => (input, index = 0) => {
+  for (let rule of rules) {
     const output = rule(input, index)
     if (!isError(output)) return output
-    return [empty, index]
   }
-  f.key = `${rule.key}?`
-  return f
+  return [error, index]
 }
-const literal = lit => {
-  const f = (input, index = 0) => {
-    if (index < input.length && input[index].value === lit) return [[{ type: 'literal', content: input[index].value }], index + 1]
-    return [error, index]
-  }
-  f.key = `'${lit}'`
-  return f
-}
-const token = tkn => {
-  const f = (input, index = 0) => {
-    if (index < input.length && input[index].token === tkn) return [[{ type: 'token', content: input[index].value }], index + 1]
-    return [error, index]
-  }
-  f.key = `:${tkn}`
-  return f
-}
-const expect = (expectation, rule) => {
-  const f = (input, index = 0) => {
+const closure = rule => (input, index = 0) => {
+  const result = []
+  do {
     const output = rule(input, index)
-    if (isError(output)) {
-      throw new Error(`Expected ${expectation}. '${index < input.length ? input[index].value: 'End of input'}' found instead. At ${index < input.length ? input[index].location.join(':') : 'end of input'}`)
-    }
-    return output
-  }
-  f.key = `${rule.key}!`
-  return f
+    if (isError(output)) return [result, index]
+    index = output[1]
+    result.push(...output[0])
+  } while (true)
+  return [result, index]
 }
-
+const option = rule => (input, index = 0) => {
+  const output = rule(input, index)
+  if (!isError(output)) return output
+  return [empty, index]
+}
+const literal = lit => (input, index = 0) => {
+  if (index < input.length && input[index].value === lit) return [[{ type: 'literal', content: input[index].value }], index + 1]
+  return [error, index]
+}
+const token = tkn => (input, index = 0) => {
+  if (index < input.length && input[index].token === tkn) return [[{ type: 'token', content: input[index].value }], index + 1]
+  return [error, index]
+}
+const expect = (expectation, rule) => (input, index = 0) => {
+  const output = rule(input, index)
+  if (isError(output)) {
+    throw new Error(`Expected ${expectation}. '${index < input.length ? input[index].value: 'End of input'}' found instead. At ${index < input.length ? input[index].location.join(':') : 'end of input'}`)
+  }
+  return output
+}
 const astNodeRule = (type, rule) => (input, index = 0) => {
   const output = rule(input, index)
   if (isError(output)) return output
