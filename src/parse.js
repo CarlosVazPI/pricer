@@ -94,7 +94,15 @@ const def = (input, index) => astNodeRule(DEF, concat(token('id'), expect('"=" s
 const injectable = (input, index) => astNodeRule(INJECTABLE, concat(literal("$"), token('id'), literal('='), token('id'), closure(concat(literal(','), token('id')))))(input, index)
 const axiom = (input, index) => astNodeRule(AXIOM, concat(closure(injectable), closure(def)))(input, index)
 
-export const parse = input => axiom(input, 0)
+export const parse = tokens => {
+  const beginTime = Date.now()
+  const [tree, last] = axiom(tokens, 0)
+  console.log(`Parsed in ${((Date.now() - beginTime)/1000).toFixed(2)}s`)
+  if (last !== tokens.length) {
+    throw new Error(`Unexpected token ${tokens[last].token} (${tokens[last].value}). Expected end of input. At ${tokens[last].location.join(':')}`)
+  }
+  return tree
+}
 export const isTerminal = ({ type }) => type === 'literal' || type === 'token'
 export const getType = ({ type }) => type
 export const getContent = ({ content }) => content
