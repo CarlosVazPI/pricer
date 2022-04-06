@@ -9,10 +9,11 @@ import {
   getInjectableTerms,
   getDefinedTerms,
   getDefinitions,
-  getTermsWithinDefinition
+  getTermsWithinDefinition,
+  validate
 } from '../src/validate.js'
 
-describe('validate', () => {
+describe('validate.js', () => {
   describe('getInjectableTerms', () => {
     it('should return the injectable terms', () => {
       assert.deepEqual(getInjectableTerms(parse(tokenize('$key1: a, b, c $key2: d, e, f x=a+b y=c*d'))), ['a', 'b', 'c', 'd', 'e', 'f'])
@@ -192,6 +193,86 @@ describe('validate', () => {
     })
     it('should return empty for a definition without terms', () => {
       assert.deepEqual(getTermsWithinDefinition(definition['z']), [])
+    })
+  })
+  describe('validate', () => {
+    it('should detect no errors for well formed input', () => {
+      assert.deepEqual(validate(parse(tokenize('$key1: a, b $key2: c x=a+b-y y=c*(2-if z then 1 else 2 end) z=1'))), [])
+    })
+    it('should detect unused injectables', () => {
+      assert.deepEqual(validate(parse(tokenize('$key1: a, b $key2: c, d x=a+b-y y=c*(2-if z then 1 else 2 end) z=1'))), [{
+        message: "Injectable 'd' is unused",
+        severity: 'warning'
+      }])
+    })
+    it('should detect duplicated injectables', () => {
+      assert.deepEqual(validate(parse(tokenize('$key1: a, b $key2: c, a x=a+b-y y=c*(2-if z then 1 else 2 end) z=1'))), [{
+        "message": "Injectable 'a' is declared several times",
+        "severity": "error"
+      }])
+    })
+    it('should detect duplicated definitions', () => {
+      assert.deepEqual(validate(parse(tokenize('$key1: a, b $key2: c x=2 x=a+b-y y=c*(2-if z then 1 else 2 end) z=1'))), [{
+        "message": "Term 'x' is declared several times",
+        "severity": "error"
+      }])
+    })
+    it('should detect terms not defined', () => {
+      assert.deepEqual(validate(parse(tokenize('$key1: a, b $key2: c x=a+b-y y=c*(2-if z then 1 else 2 end) z=t'))), [{
+          message: "Term 'y' within the definition of 'x' is not fully defined",
+          severity: 'error'
+        },
+        {
+          message: "Term 'z' within the definition of 'y' is not fully defined",
+          severity: 'error'
+        },
+        {
+          message: "Term 't' within the definition of 'z' is not declared",
+          severity: 'error'
+        }
+      ])
+    })
+    it('should detect circular definitions', () => {
+      assert.deepEqual(validate(parse(tokenize('$key1: a, b $key2: c x=a+b-y y=c*(2-if z then y else 2 end) z=1'))), [{
+          message: "Term 'y' has a circular definition",
+          severity: 'error'
+        },
+        {
+          message: "Term 'y' within the definition of 'x' is not fully defined",
+          severity: 'error'
+        },
+        {
+          message: "Term 'y' within the definition of 'y' is not fully defined",
+          severity: 'error'
+        }
+      ])
+    })
+    it('should detect unused injectables, nondeclared terms, duplicated injectables and definitions, circular definitions', () => {
+      assert.deepEqual(validate(parse(tokenize('$key1: a, b $key2: c, a, d x=2 x=a+b-y y=c*(2-if z then y else 2 end) z=t'))), [{
+        "severity": "warning",
+        "message": "Injectable 'd' is unused"
+      }, {
+        "severity": "error",
+        "message": "Injectable 'a' is declared several times"
+      }, {
+        "severity": "error",
+        "message": "Term 'x' is declared several times"
+      }, {
+        "severity": "error",
+        "message": "Term 'y' has a circular definition"
+      }, {
+        "severity": "error",
+        "message": "Term 'y' within the definition of 'x' is not fully defined"
+      }, {
+        "severity": "error",
+        "message": "Term 'y' within the definition of 'y' is not fully defined"
+      }, {
+        "severity": "error",
+        "message": "Term 'z' within the definition of 'y' is not fully defined"
+      }, {
+        "severity": "error",
+        "message": "Term 't' within the definition of 'z' is not declared"
+      }])
     })
   })
 })

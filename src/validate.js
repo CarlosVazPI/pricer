@@ -44,34 +44,34 @@ export const getTermsWithinDefinition = definition => {
   return termsWithinDefinition
 }
 
-// export const validate = tree => {
-//   const definitions = getDefinitions(tree)
-//   let termsToDefine = Object.keys(definitions)
-//   const injectableTerms = getInjectableTerms(tree)
-//   const fullyDefinedTerms = [...injectableTerms]
-//   const termsWithinDefinition = new Map(termsToDefine.map(term => [term, getTermsWithinDefinition(definitions[termToDefine])]))
-//   const nonDefinedTerms =
-//   let numberOfFullyDefinedTerms
-//   while (numberOfFullyDefinedTerms != fullyDefinedTerms.length) {
-//     numberOfFullyDefinedTerms = fullyDefinedTerms.length
-//     const newFullyDefinedTerms = termsToDefine.filter(termToDefine => {
-//       return termsWithinDefinition.get(termToDefine).every(term => fullyDefinedTerms.includes(term))
-//     })
-//     termsToDefine = termsToDefine.filter(term => !newFullyDefinedTerms.includes(term))
-//     fullyDefinedTerms.push(...newFullyDefinedTerms)
-//   }
-//   const circularDefinitionTerms = termsToDefine.filter(term => termsWithinDefinition.get(term).includes(term))
-//   const unusedInjectableTerms = injectableTerms.filter(injectTerm => !Object.keys(definitions).some(defTerm => termsWithinDefinition.get(defTerm).includes(injectTerm)))
-//   const definedTerms = getDefinedTerms(tree)
-//   return [
-//     ...unusedInjectableTerms.map(term => ({ severity: 'warning', message: `Injectable '${term}' is unused`})),
-//     ...injectableTerms.filter((term, i) => injectableTerms.slice(i + 1).includes(term)).map(term => ({ severity: 'error', message: `Injectable '${term}' is declared several times` })),
-//     ...definedTerms.filter((term, i) => definedTerms.slice(i + 1).includes(term)).map(term => ({ severity: 'error', message: `Term '${term}' is declared several times` })),
-//     ...circularDefinitionTerms.map(term => ({ severity: 'error', message: `Term '${term}' has a circular definition`})),
-//     ...termsToDefine.map(improperlyDefinedTerm => {
-//       return termsWithinDefinition.get(improperlyDefinedTerm)
-//         .filter(term => !fullyDefinedTerms.includes(term))
-//         .map(term => ({ severity: 'error', message: `Term '${term}' within the definition of '${improperlyDefinedTerm}' is not defined` }))
-//     }).flat()
-//   ]
-// }
+export const validate = tree => {
+  const definitions = getDefinitions(tree)
+  const declaredTerms = Object.keys(definitions)
+  let termsToDefine = [...declaredTerms]
+  const injectableTerms = getInjectableTerms(tree)
+  const fullyDefinedTerms = [...injectableTerms]
+  const termsWithinDefinition = new Map(termsToDefine.map(term => [term, getTermsWithinDefinition(definitions[term])]))
+  let numberOfFullyDefinedTerms
+  while (numberOfFullyDefinedTerms != fullyDefinedTerms.length) {
+    numberOfFullyDefinedTerms = fullyDefinedTerms.length
+    const newFullyDefinedTerms = termsToDefine.filter(termToDefine => {
+      return termsWithinDefinition.get(termToDefine).every(term => fullyDefinedTerms.includes(term))
+    })
+    termsToDefine = termsToDefine.filter(term => !newFullyDefinedTerms.includes(term))
+    fullyDefinedTerms.push(...newFullyDefinedTerms)
+  }
+  const circularDefinitionTerms = termsToDefine.filter(term => termsWithinDefinition.get(term).includes(term))
+  const unusedInjectableTerms = injectableTerms.filter(injectTerm => !Object.keys(definitions).some(defTerm => termsWithinDefinition.get(defTerm).includes(injectTerm)))
+  const definedTerms = getDefinedTerms(tree)
+  return [
+    ...unusedInjectableTerms.map(term => ({ severity: 'warning', message: `Injectable '${term}' is unused`})),
+    ...injectableTerms.filter((term, i) => injectableTerms.slice(i + 1).includes(term)).map(term => ({ severity: 'error', message: `Injectable '${term}' is declared several times` })),
+    ...definedTerms.filter((term, i) => definedTerms.slice(i + 1).includes(term)).map(term => ({ severity: 'error', message: `Term '${term}' is declared several times` })),
+    ...circularDefinitionTerms.map(term => ({ severity: 'error', message: `Term '${term}' has a circular definition`})),
+    ...termsToDefine.map(improperlyDefinedTerm => {
+      return termsWithinDefinition.get(improperlyDefinedTerm)
+        .filter(term => !fullyDefinedTerms.includes(term))
+        .map(term => ({ severity: 'error', message: `Term '${term}' within the definition of '${improperlyDefinedTerm}' is not ${declaredTerms.includes(term) ? 'fully defined' : 'declared'}` }))
+    }).flat()
+  ]
+}
