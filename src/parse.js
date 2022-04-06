@@ -40,7 +40,7 @@ const literal = lit => (input, index = 0) => {
   return [error, index]
 }
 const token = tkn => (input, index = 0) => {
-  if (index < input.length && input[index].token === tkn) return [[{ type: 'token', content: input[index].value }], index + 1]
+  if (index < input.length && input[index].token === tkn) return [[{ type: 'token', token: tkn, content: input[index].value }], index + 1]
   return [error, index]
 }
 const expect = (expectation, rule) => (input, index = 0) => {
@@ -91,7 +91,7 @@ const value = (input, index) => astNodeRule(VALUE, concat(sum, closure(concat(ar
 const pred = (input, index) => astNodeRule(PRED, concat(value, option(concat(compOp, expect('a predicate after the comparison operator', pred)))))(input, index)
 const expr = (input, index) => astNodeRule(EXPR, concat(pred, closure(concat(logicOp, expect('a predicate after the logic operator', pred)))))(input, index)
 const def = (input, index) => astNodeRule(DEF, concat(token('id'), expect('"=" symbol', literal('=')), expect('an expression after the "=" symbol', expr)))(input, index)
-const injectable = (input, index) => astNodeRule(INJECTABLE, concat(literal("$"), token('id'), literal('='), token('id'), closure(concat(literal(','), token('id')))))(input, index)
+const injectable = (input, index) => astNodeRule(INJECTABLE, concat(literal("$"), expect('an id after "$"', token('id')), expect('":" after injectable name', literal(':')), expect('at least one injectable term', token('id')), closure(concat(literal(','), expect('an id after ","', token('id'))))))(input, index)
 const axiom = (input, index) => astNodeRule(AXIOM, concat(closure(injectable), closure(def)))(input, index)
 
 export const parse = tokens => {
@@ -105,6 +105,7 @@ export const parse = tokens => {
 }
 export const isTerminal = ({ type }) => type === 'literal' || type === 'token'
 export const getType = ({ type }) => type
+export const getToken = ({ token }) => token
 export const getContent = ({ content }) => content
 export const evaluatorHash = {
   [EXPR]: (pred, ...rest) => pairs(rest).reduce((acc, [op, pred]) => op(acc, pred), pred),

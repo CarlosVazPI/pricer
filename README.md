@@ -27,7 +27,7 @@ The pricing document consists of a preamble followed by a list of definitions.
 The preamble consists of lines like:
 
 ```
-$injectable_term = term, ..., term
+$injectable_key: term, ..., term
 ```
 
 that define a series of terms which are not defined in the document, but that take part in other terms definitions. These terms are to be substituted by values injected at the time of pricing.
@@ -79,7 +79,7 @@ This is the grammar followed by `pricer`:
 
 ```
 S = { Injectable } { Def }.
-Injectable = "$" id = id { "," id }.
+Injectable = "$" id ":" id { "," id }.
 Def = id "=" Expr.
 Expr = Pred { LogicOp Pred }.
 Pred = Value [CompOp Value].

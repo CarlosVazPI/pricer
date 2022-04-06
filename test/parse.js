@@ -51,8 +51,17 @@ describe('parse', () => {
     it('throws an error when broken factor not at end', () => {
       assert.throws(() => parse(tokenize('a = 1 * + 2 ')), { name: 'Error', message: `Expected a factor after the operator. '+' found instead. At 1:8` })
     })
-    it('throws an error input continues', () => {
+    it('throws an error when input continues', () => {
       assert.throws(() => parse(tokenize('a = 1 2')), { name: 'Error', message: 'Unexpected token num (2). Expected end of input. At 1:6' })
+    })
+    it('throws an error on wrong injectable format, no ":"', () => {
+      assert.throws(() => parse(tokenize('$a = b')), { name: 'Error', message: `Expected ":" after injectable name. '=' found instead. At 1:3` })
+    })
+    it('throws an error on wrong injectable format, no term after ":"', () => {
+      assert.throws(() => parse(tokenize('$a: 1')), { name: 'Error', message: `Expected at least one injectable term. '1' found instead. At 1:4` })
+    })
+    it('throws an error on wrong injectable format, no term after ","', () => {
+      assert.throws(() => parse(tokenize('$a: b,')), { name: 'Error', message: `Expected an id after ",". 'End of input' found instead. At end of input` })
     })
     it('should parse a simple definition', () => {
       assert.deepEqual(parse(tokenize('a = 1')), [{
@@ -61,6 +70,7 @@ describe('parse', () => {
           "type": "DEF",
           "content": [{
             "type": "token",
+            "token": "id",
             "content": "a"
           }, {
             "type": "literal",
@@ -79,6 +89,7 @@ describe('parse', () => {
                       "type": "BASE",
                       "content": [{
                         "type": "token",
+                        "token": "num",
                         "content": "1"
                       }]
                     }]
@@ -97,6 +108,7 @@ describe('parse', () => {
           "type": "DEF",
           "content": [{
             "type": "token",
+            "token": "id",
             "content": "a"
           }, {
             "type": "literal",
@@ -115,6 +127,7 @@ describe('parse', () => {
                       "type": "BASE",
                       "content": [{
                         "type": "token",
+                        "token": "num",
                         "content": "1"
                       }]
                     }]
@@ -127,6 +140,7 @@ describe('parse', () => {
           "type": "DEF",
           "content": [{
             "type": "token",
+            "token": "id",
             "content": "b"
           }, {
             "type": "literal",
@@ -157,6 +171,7 @@ describe('parse', () => {
           "type": "DEF",
           "content": [{
             "type": "token",
+            "token": "id",
             "content": "c"
           }, {
             "type": "literal",
@@ -187,6 +202,7 @@ describe('parse', () => {
           "type": "DEF",
           "content": [{
             "type": "token",
+            "token": "id",
             "content": "d"
           }, {
             "type": "literal",
@@ -205,6 +221,7 @@ describe('parse', () => {
                       "type": "BASE",
                       "content": [{
                         "type": "token",
+                        "token": "num",
                         "content": "0.1"
                       }]
                     }]
@@ -217,6 +234,7 @@ describe('parse', () => {
           "type": "DEF",
           "content": [{
             "type": "token",
+            "token": "id",
             "content": "e"
           }, {
             "type": "literal",
@@ -235,6 +253,7 @@ describe('parse', () => {
                       "type": "BASE",
                       "content": [{
                         "type": "token",
+                        "token": "id",
                         "content": "f"
                       }]
                     }]
@@ -247,7 +266,7 @@ describe('parse', () => {
       }])
     })
     it('should parse a definition with some injectables', () => {
-      assert.deepEqual(parse(tokenize('$injectable = a, b c = 1')), [{
+      assert.deepEqual(parse(tokenize('$injectable: a, b c = 1')), [{
         "type": "AXIOM",
         "content": [{
           "type": "INJECTABLE",
@@ -256,24 +275,28 @@ describe('parse', () => {
             "content": "$"
           }, {
             "type": "token",
+            "token": "id",
             "content": "injectable"
           }, {
             "type": "literal",
-            "content": "="
+            "content": ":"
           }, {
             "type": "token",
+            "token": "id",
             "content": "a"
           }, {
             "type": "literal",
             "content": ","
           }, {
             "type": "token",
+            "token": "id",
             "content": "b"
           }]
         }, {
           "type": "DEF",
           "content": [{
             "type": "token",
+            "token": "id",
             "content": "c"
           }, {
             "type": "literal",
@@ -292,6 +315,7 @@ describe('parse', () => {
                       "type": "BASE",
                       "content": [{
                         "type": "token",
+                        "token": "num",
                         "content": "1"
                       }]
                     }]
@@ -310,6 +334,7 @@ describe('parse', () => {
           "type": "DEF",
           "content": [{
             "type": "token",
+            "token": "id",
             "content": "a"
           }, {
             "type": "literal",
@@ -328,6 +353,7 @@ describe('parse', () => {
                       "type": "BASE",
                       "content": [{
                         "type": "token",
+                        "token": "num",
                         "content": "0"
                       }]
                     }]
@@ -352,6 +378,7 @@ describe('parse', () => {
                       "type": "BASE",
                       "content": [{
                         "type": "token",
+                        "token": "num",
                         "content": "1"
                       }]
                     }]
@@ -376,6 +403,7 @@ describe('parse', () => {
                       "type": "BASE",
                       "content": [{
                         "type": "token",
+                        "token": "num",
                         "content": "2"
                       }]
                     }]
@@ -412,6 +440,7 @@ describe('parse', () => {
                                   "type": "BASE",
                                   "content": [{
                                     "type": "token",
+                                    "token": "num",
                                     "content": "3"
                                   }]
                                 }]
@@ -442,6 +471,7 @@ describe('parse', () => {
                                               "type": "BASE",
                                               "content": [{
                                                 "type": "token",
+                                                "token": "num",
                                                 "content": "4"
                                               }]
                                             }]
@@ -466,6 +496,7 @@ describe('parse', () => {
                                               "type": "BASE",
                                               "content": [{
                                                 "type": "token",
+                                                "token": "num",
                                                 "content": "5"
                                               }]
                                             }]
@@ -496,6 +527,7 @@ describe('parse', () => {
                                               "type": "BASE",
                                               "content": [{
                                                 "type": "token",
+                                                "token": "num",
                                                 "content": "6"
                                               }]
                                             }]
@@ -520,6 +552,7 @@ describe('parse', () => {
                                               "type": "BASE",
                                               "content": [{
                                                 "type": "token",
+                                                "token": "num",
                                                 "content": "7"
                                               }]
                                             }]
@@ -553,6 +586,7 @@ describe('parse', () => {
                                   "type": "BASE",
                                   "content": [{
                                     "type": "token",
+                                    "token": "num",
                                     "content": "8"
                                   }]
                                 }]
@@ -571,6 +605,7 @@ describe('parse', () => {
                                   "type": "BASE",
                                   "content": [{
                                     "type": "token",
+                                    "token": "num",
                                     "content": "9"
                                   }]
                                 }]
@@ -595,6 +630,7 @@ describe('parse', () => {
                       "type": "BASE",
                       "content": [{
                         "type": "token",
+                        "token": "num",
                         "content": "10"
                       }]
                     }]

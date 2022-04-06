@@ -28,7 +28,7 @@ describe('tokenize', () => {
   })
   it('should correctly return the tokens of an input', () => {
     const input = `term = )) && oth,er_term $split
-term 123 123.123 * - + / ! || ( ( <= < > >= != end`
+term 123 123.123 * - + / ! || ( ( <= < > >= != end :`
     assert.deepEqual(tokenize(input), [{
       "token": "id",
       "value": "term",
@@ -137,6 +137,13 @@ term 123 123.123 * - + / ! || ( ( <= < > >= != end`
       "token": "id",
       "value": "end",
       "location": [2, 47]
+    }, {
+      "location": [
+        2,
+        51
+      ],
+      "token": "symbol",
+      "value": ":"
     }])
   })
 })
