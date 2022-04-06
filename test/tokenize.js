@@ -1,5 +1,7 @@
 import assert from 'assert'
-import { tokenize } from '../src/tokenize.js'
+import {
+  tokenize
+} from '../src/tokenize.js'
 
 describe('tokenize', () => {
   it('should return [] when input is empty', () => {
@@ -25,7 +27,7 @@ describe('tokenize', () => {
     }])
   })
   it('should correctly return the tokens of an input', () => {
-    const input = `term = )) && other_term split
+    const input = `term = )) && oth,er_term $split
 term 123 123.123 * - + / ! || ( ( <= < > >= != end`
     assert.deepEqual(tokenize(input), [{
       "token": "id",
@@ -49,12 +51,24 @@ term 123 123.123 * - + / ! || ( ( <= < > >= != end`
       "location": [1, 10]
     }, {
       "token": "id",
-      "value": "other_term",
+      "value": "oth",
       "location": [1, 13]
+    }, {
+      "token": "symbol",
+      "value": ",",
+      "location": [1, 16]
+    }, {
+      "token": "id",
+      "value": "er_term",
+      "location": [1, 17]
+    }, {
+      "token": "symbol",
+      "value": "$",
+      "location": [1, 25]
     }, {
       "token": "id",
       "value": "split",
-      "location": [1, 24]
+      "location": [1, 26]
     }, {
       "token": "id",
       "value": "term",

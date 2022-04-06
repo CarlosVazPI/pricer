@@ -22,7 +22,17 @@ The pricer can also be called to evaluate specific terms, not only `total`.
 
 ## Structure of the pricing document
 
-The pricing document consists of a list of definitions, where each definition is of the form:
+The pricing document consists of a preamble followed by a list of definitions.
+
+The preamble consists of lines like:
+
+```
+$injectable_term = term, ..., term
+```
+
+that define a series of terms which are not defined in the document, but that take part in other terms definitions. These terms are to be substituted by values injected at the time of pricing.
+
+Each definition is of the form:
 
 ```
 term = expression
@@ -31,7 +41,7 @@ term = expression
 where `expression` is an expression that may involve the following types of data:
 
 * numbers (all of them treated as floats)
-* `true` and `false`
+* booleans `true` and `false`
 * strings (in single or doble quotes)
 * other terms which, in turn, are defined in the same pricing document, or are intended to be provided at pricing time.
 
@@ -48,16 +58,18 @@ The above values can be operated with the usual operators, in order of precedenc
 The following is an example of a definition:
 
 ```
+$injectable = cells
 multiplier = if cells >= 5 then 1.5 else 1 end
 price = 500 * cells * multiplier
 ```
 
 when the pricer is requested to evaluate the term `price`, it first evaluates `multiplier`, which is provided above.
-The term `cells`, however, is not defined, so in order to evaluate `price`, a key-value pair must be provided indicating the value of `cells`.
+The term `cells`, however, is defined as an `$injectable`, so in order to evaluate `price`, a key-value pair must be provided indicating the value of `cells`.
 
 The above document could also have been written as
 
 ```
+$injectable = cells
 price = 500 * cells * if cells >= 5 then 1.5 else 1 end
 ```
 
@@ -66,24 +78,31 @@ price = 500 * cells * if cells >= 5 then 1.5 else 1 end
 This is the grammar followed by `pricer`:
 
 ```
-S = { Def }.
+S = { Injectable } { Def }.
+Injectable = "$" id = id { "," id }.
 Def = id "=" Expr.
-Expr = "if" Condition "then" Value "else" Value "end"
-     | Value.
-Value = Sum { Op0 Sum }.
-Sum = Factor { Op1 Factor}.
-Factor = ["-"] Base.
+Expr = Pred { LogicOp Pred }.
+Pred = Value [CompOp Value].
+Value = Sum { ArithmeticOp0 Sum }.
+Sum = Factor { ArithmeticOp1 Factor}.
+Factor = [UnaryOp] Base.
 Base = num
-     | id
-     | "(" Value ")".
-Op0 = "+" | "-".
-Op1 = "*" | "/".
-Condition = Pred { BoolOp0 Pred }.
-Pred = ["!"] PredBase.
-PredBase = Value Comp Value.
-BoolOp0 = "&&" | "||".
-Comp = ">" | ">=" | "<" | "<=" | "==" | "!=".
+     | "true"
+     | "false"
+     | "(" Expr ")"
+     | "if" Expr "then" Expr "else" Expr "end"
+     | id.
+UnaryOp = "-" | "!".
+ArithmeticOp1 = "*" | "/".
+ArithmeticOp0 = "+" | "-".
+LogicOp = "&&" | "||".
+CompOp = ">" | ">=" | "<" | "<=" | "==" | "!=".
 ```
+
+Where
+
+* id: `/[a-zA-Z_][a-zA-z0-9_]*/`,
+* num: `/[0-9]+(\.[0-9]+)?/`,
 
 ## About this repo
 
