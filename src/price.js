@@ -1,6 +1,7 @@
 import fs from 'fs'
 import { parse } from './parse.js'
 import { tokenize } from './tokenize.js'
+import { validate } from './validate.js'
 import { evaluate } from './evaluate.js'
 
 const pd = {
@@ -10,7 +11,9 @@ const pd = {
 const priceItem = (priceableItem, terms, hash) => {
   const schema = priceableItem.schema
   const doc = pd[schema]
-  return terms.reduce((acc, term) => ({ ...acc, [term]: evaluate(parse(tokenize(doc)), term, hash) }), {})
+  const parsed = parse(tokenize(doc))
+  console.log(validate(parsed))
+  return terms.reduce((acc, term) => ({ ...acc, [term]: evaluate(parsed, term, hash) }), {})
 }
 
 export const price = (priceable, terms, hash) => {

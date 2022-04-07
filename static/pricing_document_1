@@ -1,9 +1,7 @@
+$x: injected_condition, injected_value_1, injected_value_2
+
 total = value_a * injected_value_1 + value_b
-
 value_a = if amount > 1 then 2 * value_a_multiplier else 3 * value_a_multiplier end
-
 value_a_multiplier = 1.1
-
-value_b = if injected_condition > 0 then injected_value_2 else 3 end
-
+value_b = if injected_condition then injected_value_2 else 3 end
 amount = injected_value_1 + injected_value_2
