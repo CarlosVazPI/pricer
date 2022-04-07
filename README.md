@@ -47,10 +47,11 @@ where `expression` is an expression that may involve the following types of data
 
 The above values can be operated with the usual operators, in order of precedence, all of which of obvious meaning:
 
-* `if` _condition_ `then` _expression_ `else` _expression `end`
+* `if` _expression_ `then` _expression_ `else` _expression `end`
 * `-` and `!` (unary, in front of a value)
 * `*` and `/`
 * `+` and `-` (binary)
+* `>`, `>=`, `<`, `<=`, `!=` and `==`
 * `&&` and `||`
 
 ### Example of definition
@@ -58,7 +59,7 @@ The above values can be operated with the usual operators, in order of precedenc
 The following is an example of a definition:
 
 ```
-$injectable = cells
+$injectable: cells
 multiplier = if cells >= 5 then 1.5 else 1 end
 price = 500 * cells * multiplier
 ```
@@ -69,7 +70,7 @@ The term `cells`, however, is defined as an `$injectable`, so in order to evalua
 The above document could also have been written as
 
 ```
-$injectable = cells
+$injectable: cells
 price = 500 * cells * if cells >= 5 then 1.5 else 1 end
 ```
 
@@ -103,6 +104,15 @@ Where
 
 * id: `/[a-zA-Z_][a-zA-z0-9_]*/`,
 * num: `/[0-9]+(\.[0-9]+)?/`,
+
+## How pricing works
+
+<img width="726" alt="image" src="https://user-images.githubusercontent.com/16546858/162245768-3443b37f-ae62-473d-9b85-8186fb1ce03f.png">
+
+Each product defines which schema it uses. Two products may use the same schema (they are priced similarly, maybe they're in the same product family).
+A schema may define a series of addon schemas. Each schema (or addon schema) define one line item for the final price breakdown.
+
+Schemas can "inherit" from other schemas. The subschema (the one who inherits) is a copy of the superschema (the inherited one), except for the specific definitions it contains. For example, let S be a schema defining the terms `a` and `b`, and T a subschema of S defining the terms `b` and `c`. A product making use of subschema T would calculate the values for `b` and `c` according to T, and the value for `a` according to S.
 
 ## About this repo
 
