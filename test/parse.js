@@ -6,10 +6,394 @@ import {
   isTerminal,
   getType,
   getContent,
+  getInjectableTermTokens,
+  getDeclaredTermTokens,
+  getDefinitionMap,
+  getTermTokensWithinDefinition,
   parse
 } from '../src/parse.js'
 
 describe('parse', () => {
+  describe('getInjectableTermTokens', () => {
+    it('should return the injectable terms', () => {
+      assert.deepEqual(getInjectableTermTokens(parse(tokenize('$key1: a, b, c $key2: d, e, f x=a+b y=c*d'))), [{
+        "type": "token",
+        "token": "id",
+        "content": "a",
+        "location": [1, 7]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "b",
+        "location": [1, 10]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "c",
+        "location": [1, 13]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "d",
+        "location": [1, 22]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "e",
+        "location": [1, 25]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "f",
+        "location": [1, 28]
+      }])
+    })
+    it('should return the injectable terms with duplicates when they are duplicated', () => {
+      assert.deepEqual(getInjectableTermTokens(parse(tokenize('$key1: a, b, c $key2: d, b, f x=a+b y=c*d'))), [{
+        "type": "token",
+        "token": "id",
+        "content": "a",
+        "location": [1, 7]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "b",
+        "location": [1, 10]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "c",
+        "location": [1, 13]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "d",
+        "location": [1, 22]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "b",
+        "location": [1, 25]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "f",
+        "location": [1, 28]
+      }])
+    })
+  })
+  describe('getDeclaredTermTokens', () => {
+    it('should return the defined terms', () => {
+      assert.deepEqual(getDeclaredTermTokens(parse(tokenize('$key1: a, b, c $key2: d, e, f x=a+b y=c*d'))), [{
+        "type": "token",
+        "token": "id",
+        "content": "x",
+        "location": [1, 30]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "y",
+        "location": [1, 36]
+      }])
+    })
+    it('should return the defined terms with duplicates when they are duplicated', () => {
+      assert.deepEqual(getDeclaredTermTokens(parse(tokenize('$key1: a, b, c $key2: d, b, f x=a+b y=c*d x=4'))), [{
+        "type": "token",
+        "token": "id",
+        "content": "x",
+        "location": [1, 30]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "y",
+        "location": [1, 36]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "x",
+        "location": [1, 42]
+      }])
+    })
+  })
+  describe('getDefinitionMap', () => {
+    it('should return the definitions', () => {
+      assert.deepEqual([...getDefinitionMap(parse(tokenize('$key1: a, b, c $key2: d, e, f x=a+b y=c*d'))).entries()], [
+        [{
+          "type": "token",
+          "token": "id",
+          "content": "x",
+          "location": [1, 30]
+        }, {
+          "type": "EXPR",
+          "content": [{
+            "type": "PRED",
+            "content": [{
+              "type": "VALUE",
+              "content": [{
+                "type": "SUM",
+                "content": [{
+                  "type": "FACTOR",
+                  "content": [{
+                    "type": "BASE",
+                    "content": [{
+                      "type": "token",
+                      "token": "id",
+                      "content": "a",
+                      "location": [1, 32]
+                    }]
+                  }]
+                }]
+              }, {
+                "type": "ARITH_OP_0",
+                "content": [{
+                  "type": "literal",
+                  "content": "+",
+                  "location": [1, 33]
+                }]
+              }, {
+                "type": "SUM",
+                "content": [{
+                  "type": "FACTOR",
+                  "content": [{
+                    "type": "BASE",
+                    "content": [{
+                      "type": "token",
+                      "token": "id",
+                      "content": "b",
+                      "location": [1, 34]
+                    }]
+                  }]
+                }]
+              }]
+            }]
+          }]
+        }],
+        [{
+          "type": "token",
+          "token": "id",
+          "content": "y",
+          "location": [1, 36]
+        }, {
+          "type": "EXPR",
+          "content": [{
+            "type": "PRED",
+            "content": [{
+              "type": "VALUE",
+              "content": [{
+                "type": "SUM",
+                "content": [{
+                  "type": "FACTOR",
+                  "content": [{
+                    "type": "BASE",
+                    "content": [{
+                      "type": "token",
+                      "token": "id",
+                      "content": "c",
+                      "location": [1, 38]
+                    }]
+                  }]
+                }, {
+                  "type": "ARITH_OP_1",
+                  "content": [{
+                    "type": "literal",
+                    "content": "*",
+                    "location": [1, 39]
+                  }]
+                }, {
+                  "type": "FACTOR",
+                  "content": [{
+                    "type": "BASE",
+                    "content": [{
+                      "type": "token",
+                      "token": "id",
+                      "content": "d",
+                      "location": [1, 40]
+                    }]
+                  }]
+                }]
+              }]
+            }]
+          }]
+        }]
+      ])
+    })
+    it('should return the definitions even when there are duplicates', () => {
+      assert.deepEqual([...getDefinitionMap(parse(tokenize('$key1: a, b, c $key2: d, b, f x=a+b y=c*d x=4'))).entries()], [
+        [{
+          "type": "token",
+          "token": "id",
+          "content": "x",
+          "location": [1, 30]
+        }, {
+          "type": "EXPR",
+          "content": [{
+            "type": "PRED",
+            "content": [{
+              "type": "VALUE",
+              "content": [{
+                "type": "SUM",
+                "content": [{
+                  "type": "FACTOR",
+                  "content": [{
+                    "type": "BASE",
+                    "content": [{
+                      "type": "token",
+                      "token": "id",
+                      "content": "a",
+                      "location": [1, 32]
+                    }]
+                  }]
+                }]
+              }, {
+                "type": "ARITH_OP_0",
+                "content": [{
+                  "type": "literal",
+                  "content": "+",
+                  "location": [1, 33]
+                }]
+              }, {
+                "type": "SUM",
+                "content": [{
+                  "type": "FACTOR",
+                  "content": [{
+                    "type": "BASE",
+                    "content": [{
+                      "type": "token",
+                      "token": "id",
+                      "content": "b",
+                      "location": [1, 34]
+                    }]
+                  }]
+                }]
+              }]
+            }]
+          }]
+        }],
+        [{
+          "type": "token",
+          "token": "id",
+          "content": "y",
+          "location": [1, 36]
+        }, {
+          "type": "EXPR",
+          "content": [{
+            "type": "PRED",
+            "content": [{
+              "type": "VALUE",
+              "content": [{
+                "type": "SUM",
+                "content": [{
+                  "type": "FACTOR",
+                  "content": [{
+                    "type": "BASE",
+                    "content": [{
+                      "type": "token",
+                      "token": "id",
+                      "content": "c",
+                      "location": [1, 38]
+                    }]
+                  }]
+                }, {
+                  "type": "ARITH_OP_1",
+                  "content": [{
+                    "type": "literal",
+                    "content": "*",
+                    "location": [1, 39]
+                  }]
+                }, {
+                  "type": "FACTOR",
+                  "content": [{
+                    "type": "BASE",
+                    "content": [{
+                      "type": "token",
+                      "token": "id",
+                      "content": "d",
+                      "location": [1, 40]
+                    }]
+                  }]
+                }]
+              }]
+            }]
+          }]
+        }],
+        [{
+          "type": "token",
+          "token": "id",
+          "content": "x",
+          "location": [1, 42]
+        }, {
+          "type": "EXPR",
+          "content": [{
+            "type": "PRED",
+            "content": [{
+              "type": "VALUE",
+              "content": [{
+                "type": "SUM",
+                "content": [{
+                  "type": "FACTOR",
+                  "content": [{
+                    "type": "BASE",
+                    "content": [{
+                      "type": "token",
+                      "token": "num",
+                      "content": "4",
+                      "location": [1, 44]
+                    }]
+                  }]
+                }]
+              }]
+            }]
+          }]
+        }]
+      ])
+    })
+  })
+  describe('getTermTokensWithinDefinition', () => {
+    const definition = getDefinitionMap(parse(tokenize('$key1: a, b, c $key2: d, e, f x=a+b-y y=c*(2-if y then 1 else 2 end) z=1')))
+    const x = [...definition.keys()].find(({
+      content
+    }) => content === 'x')
+    const y = [...definition.keys()].find(({
+      content
+    }) => content === 'y')
+    const z = [...definition.keys()].find(({
+      content
+    }) => content === 'z')
+    it('should return the terms within a shallow simple definition', () => {
+      assert.deepEqual(getTermTokensWithinDefinition(definition.get(x)), [{
+        "type": "token",
+        "token": "id",
+        "content": "y",
+        "location": [1, 36]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "b",
+        "location": [1, 34]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "a",
+        "location": [1, 32]
+      }])
+    })
+    it('should return the terms within a deep complex circular definition', () => {
+      assert.deepEqual(getTermTokensWithinDefinition(definition.get(y)), [{
+        "type": "token",
+        "token": "id",
+        "content": "y",
+        "location": [1, 48]
+      }, {
+        "type": "token",
+        "token": "id",
+        "content": "c",
+        "location": [1, 40]
+      }])
+    })
+    it('should return empty for a definition without terms', () => {
+      assert.deepEqual(getTermTokensWithinDefinition(definition.get(z)), [])
+    })
+  })
   describe('isTerminal', () => {
     it('should return false for a non terminal token', () => {
       assert.equal(isTerminal({
@@ -43,25 +427,52 @@ describe('parse', () => {
   })
   describe('parse', () => {
     it('throws an error when broken definition', () => {
-      assert.throws(() => parse(tokenize('a =')), { name: 'Error', message: `Expected an expression after the "=" symbol. 'End of input' found instead. At end of input` })
+      assert.throws(() => parse(tokenize('a =')), {
+        name: 'Error',
+        message: `Expected an expression after the "=" symbol. 'End of input' found instead. At end of input`
+      })
     })
     it('throws an error when broken sum at end', () => {
-      assert.throws(() => parse(tokenize('a = 1 +')), { name: 'Error', message: `Expected a sumator after the operator. 'End of input' found instead. At end of input` })
+      assert.throws(() => parse(tokenize('a = 1 +')), {
+        name: 'Error',
+        message: `Expected a sumator after the operator. 'End of input' found instead. At end of input`
+      })
     })
     it('throws an error when broken factor not at end', () => {
-      assert.throws(() => parse(tokenize('a = 1 * + 2 ')), { name: 'Error', message: `Expected a factor after the operator. '+' found instead. At 1:8` })
+      assert.throws(() => parse(tokenize('a = 1 * + 2 ')), {
+        name: 'Error',
+        message: `Expected a factor after the operator. '+' found instead. At 1:8`
+      })
     })
     it('throws an error when input continues', () => {
-      assert.throws(() => parse(tokenize('a = 1 2')), { name: 'Error', message: 'Unexpected token num (2). Expected end of input. At 1:6' })
+      assert.throws(() => parse(tokenize('a = 1 2')), {
+        name: 'Error',
+        message: 'Unexpected token num (2). Expected end of input. At 1:6'
+      })
     })
     it('throws an error on wrong injectable format, no ":"', () => {
-      assert.throws(() => parse(tokenize('$a = b')), { name: 'Error', message: `Expected ":" after injectable name. '=' found instead. At 1:3` })
+      assert.throws(() => parse(tokenize('$a = b')), {
+        name: 'Error',
+        message: `Expected ":" after injectable name. '=' found instead. At 1:3`
+      })
     })
     it('throws an error on wrong injectable format, no term after ":"', () => {
-      assert.throws(() => parse(tokenize('$a: 1')), { name: 'Error', message: `Expected at least one injectable term. '1' found instead. At 1:4` })
+      assert.throws(() => parse(tokenize('$a: 1')), {
+        name: 'Error',
+        message: `Expected at least one injectable term. '1' found instead. At 1:4`
+      })
     })
     it('throws an error on wrong injectable format, no term after ","', () => {
-      assert.throws(() => parse(tokenize('$a: b,')), { name: 'Error', message: `Expected an id after ",". 'End of input' found instead. At end of input` })
+      assert.throws(() => parse(tokenize('$a: b,')), {
+        name: 'Error',
+        message: `Expected an id after ",". 'End of input' found instead. At end of input`
+      })
+    })
+    it('throws several errors', () => {
+      assert.throws(() => parse(tokenize('$a: b, 1 $b = c 2 x: y -')), {
+        name: 'Error',
+        message: `Expected an id after ",". '1' found instead. At 1:7`
+      })
     })
     it('should parse a simple definition', () => {
       assert.deepEqual(parse(tokenize('a = 1')), [{
@@ -71,10 +482,12 @@ describe('parse', () => {
           "content": [{
             "type": "token",
             "token": "id",
-            "content": "a"
+            "content": "a",
+            "location": [1, 0]
           }, {
             "type": "literal",
-            "content": "="
+            "content": "=",
+            "location": [1, 2]
           }, {
             "type": "EXPR",
             "content": [{
@@ -90,7 +503,8 @@ describe('parse', () => {
                       "content": [{
                         "type": "token",
                         "token": "num",
-                        "content": "1"
+                        "content": "1",
+                        "location": [1, 4]
                       }]
                     }]
                   }]
@@ -109,10 +523,12 @@ describe('parse', () => {
           "content": [{
             "type": "token",
             "token": "id",
-            "content": "a"
+            "content": "a",
+            "location": [1, 0]
           }, {
             "type": "literal",
-            "content": "="
+            "content": "=",
+            "location": [1, 2]
           }, {
             "type": "EXPR",
             "content": [{
@@ -128,7 +544,8 @@ describe('parse', () => {
                       "content": [{
                         "type": "token",
                         "token": "num",
-                        "content": "1"
+                        "content": "1",
+                        "location": [1, 4]
                       }]
                     }]
                   }]
@@ -141,10 +558,12 @@ describe('parse', () => {
           "content": [{
             "type": "token",
             "token": "id",
-            "content": "b"
+            "content": "b",
+            "location": [1, 6]
           }, {
             "type": "literal",
-            "content": "="
+            "content": "=",
+            "location": [1, 8]
           }, {
             "type": "EXPR",
             "content": [{
@@ -159,7 +578,8 @@ describe('parse', () => {
                       "type": "BASE",
                       "content": [{
                         "type": "literal",
-                        "content": "true"
+                        "content": "true",
+                        "location": [1, 10]
                       }]
                     }]
                   }]
@@ -172,10 +592,12 @@ describe('parse', () => {
           "content": [{
             "type": "token",
             "token": "id",
-            "content": "c"
+            "content": "c",
+            "location": [1, 15]
           }, {
             "type": "literal",
-            "content": "="
+            "content": "=",
+            "location": [1, 17]
           }, {
             "type": "EXPR",
             "content": [{
@@ -190,7 +612,8 @@ describe('parse', () => {
                       "type": "BASE",
                       "content": [{
                         "type": "literal",
-                        "content": "false"
+                        "content": "false",
+                        "location": [1, 19]
                       }]
                     }]
                   }]
@@ -203,10 +626,12 @@ describe('parse', () => {
           "content": [{
             "type": "token",
             "token": "id",
-            "content": "d"
+            "content": "d",
+            "location": [1, 25]
           }, {
             "type": "literal",
-            "content": "="
+            "content": "=",
+            "location": [1, 27]
           }, {
             "type": "EXPR",
             "content": [{
@@ -222,7 +647,8 @@ describe('parse', () => {
                       "content": [{
                         "type": "token",
                         "token": "num",
-                        "content": "0.1"
+                        "content": "0.1",
+                        "location": [1, 29]
                       }]
                     }]
                   }]
@@ -235,10 +661,12 @@ describe('parse', () => {
           "content": [{
             "type": "token",
             "token": "id",
-            "content": "e"
+            "content": "e",
+            "location": [1, 33]
           }, {
             "type": "literal",
-            "content": "="
+            "content": "=",
+            "location": [1, 35]
           }, {
             "type": "EXPR",
             "content": [{
@@ -254,7 +682,8 @@ describe('parse', () => {
                       "content": [{
                         "type": "token",
                         "token": "id",
-                        "content": "f"
+                        "content": "f",
+                        "location": [1, 37]
                       }]
                     }]
                   }]
@@ -272,35 +701,43 @@ describe('parse', () => {
           "type": "INJECTABLE",
           "content": [{
             "type": "literal",
-            "content": "$"
+            "content": "$",
+            "location": [1, 0]
           }, {
             "type": "token",
             "token": "id",
-            "content": "injectable"
+            "content": "injectable",
+            "location": [1, 1]
           }, {
             "type": "literal",
-            "content": ":"
+            "content": ":",
+            "location": [1, 11]
           }, {
             "type": "token",
             "token": "id",
-            "content": "a"
+            "content": "a",
+            "location": [1, 13]
           }, {
             "type": "literal",
-            "content": ","
+            "content": ",",
+            "location": [1, 14]
           }, {
             "type": "token",
             "token": "id",
-            "content": "b"
+            "content": "b",
+            "location": [1, 16]
           }]
         }, {
           "type": "DEF",
           "content": [{
             "type": "token",
             "token": "id",
-            "content": "c"
+            "content": "c",
+            "location": [1, 18]
           }, {
             "type": "literal",
-            "content": "="
+            "content": "=",
+            "location": [1, 20]
           }, {
             "type": "EXPR",
             "content": [{
@@ -316,7 +753,8 @@ describe('parse', () => {
                       "content": [{
                         "type": "token",
                         "token": "num",
-                        "content": "1"
+                        "content": "1",
+                        "location": [1, 22]
                       }]
                     }]
                   }]
@@ -335,10 +773,12 @@ describe('parse', () => {
           "content": [{
             "type": "token",
             "token": "id",
-            "content": "a"
+            "content": "a",
+            "location": [1, 0]
           }, {
             "type": "literal",
-            "content": "="
+            "content": "=",
+            "location": [1, 2]
           }, {
             "type": "EXPR",
             "content": [{
@@ -354,7 +794,8 @@ describe('parse', () => {
                       "content": [{
                         "type": "token",
                         "token": "num",
-                        "content": "0"
+                        "content": "0",
+                        "location": [1, 4]
                       }]
                     }]
                   }]
@@ -364,7 +805,8 @@ describe('parse', () => {
               "type": "LOGIC_OP",
               "content": [{
                 "type": "literal",
-                "content": "||"
+                "content": "||",
+                "location": [1, 6]
               }]
             }, {
               "type": "PRED",
@@ -379,7 +821,8 @@ describe('parse', () => {
                       "content": [{
                         "type": "token",
                         "token": "num",
-                        "content": "1"
+                        "content": "1",
+                        "location": [1, 9]
                       }]
                     }]
                   }]
@@ -387,7 +830,8 @@ describe('parse', () => {
                   "type": "ARITH_OP_0",
                   "content": [{
                     "type": "literal",
-                    "content": "+"
+                    "content": "+",
+                    "location": [1, 11]
                   }]
                 }, {
                   "type": "SUM",
@@ -397,21 +841,24 @@ describe('parse', () => {
                       "type": "UNARY_OP",
                       "content": [{
                         "type": "literal",
-                        "content": "!"
+                        "content": "!",
+                        "location": [1, 13]
                       }]
                     }, {
                       "type": "BASE",
                       "content": [{
                         "type": "token",
                         "token": "num",
-                        "content": "2"
+                        "content": "2",
+                        "location": [1, 14]
                       }]
                     }]
                   }, {
                     "type": "ARITH_OP_1",
                     "content": [{
                       "type": "literal",
-                      "content": "*"
+                      "content": "*",
+                      "location": [1, 16]
                     }]
                   }, {
                     "type": "FACTOR",
@@ -419,7 +866,8 @@ describe('parse', () => {
                       "type": "BASE",
                       "content": [{
                         "type": "literal",
-                        "content": "("
+                        "content": "(",
+                        "location": [1, 18]
                       }, {
                         "type": "EXPR",
                         "content": [{
@@ -434,21 +882,24 @@ describe('parse', () => {
                                   "type": "UNARY_OP",
                                   "content": [{
                                     "type": "literal",
-                                    "content": "-"
+                                    "content": "-",
+                                    "location": [1, 19]
                                   }]
                                 }, {
                                   "type": "BASE",
                                   "content": [{
                                     "type": "token",
                                     "token": "num",
-                                    "content": "3"
+                                    "content": "3",
+                                    "location": [1, 20]
                                   }]
                                 }]
                               }, {
                                 "type": "ARITH_OP_1",
                                 "content": [{
                                   "type": "literal",
-                                  "content": "/"
+                                  "content": "/",
+                                  "location": [1, 22]
                                 }]
                               }, {
                                 "type": "FACTOR",
@@ -456,7 +907,8 @@ describe('parse', () => {
                                   "type": "BASE",
                                   "content": [{
                                     "type": "literal",
-                                    "content": "if"
+                                    "content": "if",
+                                    "location": [1, 24]
                                   }, {
                                     "type": "EXPR",
                                     "content": [{
@@ -472,7 +924,8 @@ describe('parse', () => {
                                               "content": [{
                                                 "type": "token",
                                                 "token": "num",
-                                                "content": "4"
+                                                "content": "4",
+                                                "location": [1, 27]
                                               }]
                                             }]
                                           }]
@@ -480,7 +933,8 @@ describe('parse', () => {
                                           "type": "ARITH_OP_0",
                                           "content": [{
                                             "type": "literal",
-                                            "content": "-"
+                                            "content": "-",
+                                            "location": [1, 29]
                                           }]
                                         }, {
                                           "type": "SUM",
@@ -490,14 +944,16 @@ describe('parse', () => {
                                               "type": "UNARY_OP",
                                               "content": [{
                                                 "type": "literal",
-                                                "content": "-"
+                                                "content": "-",
+                                                "location": [1, 31]
                                               }]
                                             }, {
                                               "type": "BASE",
                                               "content": [{
                                                 "type": "token",
                                                 "token": "num",
-                                                "content": "5"
+                                                "content": "5",
+                                                "location": [1, 32]
                                               }]
                                             }]
                                           }]
@@ -506,7 +962,8 @@ describe('parse', () => {
                                     }]
                                   }, {
                                     "type": "literal",
-                                    "content": "then"
+                                    "content": "then",
+                                    "location": [1, 34]
                                   }, {
                                     "type": "EXPR",
                                     "content": [{
@@ -521,14 +978,16 @@ describe('parse', () => {
                                               "type": "UNARY_OP",
                                               "content": [{
                                                 "type": "literal",
-                                                "content": "!"
+                                                "content": "!",
+                                                "location": [1, 39]
                                               }]
                                             }, {
                                               "type": "BASE",
                                               "content": [{
                                                 "type": "token",
                                                 "token": "num",
-                                                "content": "6"
+                                                "content": "6",
+                                                "location": [1, 40]
                                               }]
                                             }]
                                           }]
@@ -537,7 +996,8 @@ describe('parse', () => {
                                     }]
                                   }, {
                                     "type": "literal",
-                                    "content": "else"
+                                    "content": "else",
+                                    "location": [1, 42]
                                   }, {
                                     "type": "EXPR",
                                     "content": [{
@@ -553,7 +1013,8 @@ describe('parse', () => {
                                               "content": [{
                                                 "type": "token",
                                                 "token": "num",
-                                                "content": "7"
+                                                "content": "7",
+                                                "location": [1, 47]
                                               }]
                                             }]
                                           }]
@@ -562,7 +1023,8 @@ describe('parse', () => {
                                     }]
                                   }, {
                                     "type": "literal",
-                                    "content": "end"
+                                    "content": "end",
+                                    "location": [1, 49]
                                   }]
                                 }]
                               }]
@@ -572,7 +1034,8 @@ describe('parse', () => {
                           "type": "LOGIC_OP",
                           "content": [{
                             "type": "literal",
-                            "content": "&&"
+                            "content": "&&",
+                            "location": [1, 53]
                           }]
                         }, {
                           "type": "PRED",
@@ -587,7 +1050,8 @@ describe('parse', () => {
                                   "content": [{
                                     "type": "token",
                                     "token": "num",
-                                    "content": "8"
+                                    "content": "8",
+                                    "location": [1, 56]
                                   }]
                                 }]
                               }]
@@ -595,7 +1059,8 @@ describe('parse', () => {
                               "type": "ARITH_OP_0",
                               "content": [{
                                 "type": "literal",
-                                "content": "+"
+                                "content": "+",
+                                "location": [1, 58]
                               }]
                             }, {
                               "type": "SUM",
@@ -606,7 +1071,8 @@ describe('parse', () => {
                                   "content": [{
                                     "type": "token",
                                     "token": "num",
-                                    "content": "9"
+                                    "content": "9",
+                                    "location": [1, 60]
                                   }]
                                 }]
                               }]
@@ -615,14 +1081,16 @@ describe('parse', () => {
                         }]
                       }, {
                         "type": "literal",
-                        "content": ")"
+                        "content": ")",
+                        "location": [1, 61]
                       }]
                     }]
                   }, {
                     "type": "ARITH_OP_1",
                     "content": [{
                       "type": "literal",
-                      "content": "/"
+                      "content": "/",
+                      "location": [1, 63]
                     }]
                   }, {
                     "type": "FACTOR",
@@ -631,7 +1099,8 @@ describe('parse', () => {
                       "content": [{
                         "type": "token",
                         "token": "num",
-                        "content": "10"
+                        "content": "10",
+                        "location": [1, 65]
                       }]
                     }]
                   }]

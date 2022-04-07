@@ -36,11 +36,11 @@ const option = rule => (input, index = 0) => {
   return [empty, index]
 }
 const literal = lit => (input, index = 0) => {
-  if (index < input.length && input[index].value === lit) return [[{ type: 'literal', content: input[index].value }], index + 1]
+  if (index < input.length && input[index].value === lit) return [[{ type: 'literal', content: input[index].value, location: input[index].location }], index + 1]
   return [error, index]
 }
 const token = tkn => (input, index = 0) => {
-  if (index < input.length && input[index].token === tkn) return [[{ type: 'token', token: tkn, content: input[index].value }], index + 1]
+  if (index < input.length && input[index].token === tkn) return [[{ type: 'token', token: tkn, content: input[index].value, location: input[index].location }], index + 1]
   return [error, index]
 }
 const expect = (expectation, rule) => (input, index = 0) => {
@@ -57,20 +57,20 @@ const astNodeRule = (type, rule) => (input, index = 0) => {
   return [[{ type, content }], newIndex]
 }
 
-const COMP_OP = 'COMP_OP'
-const LOGIC_OP = 'LOGIC_OP'
-const ARITH_OP_0 = 'ARITH_OP_0'
-const ARITH_OP_1 = 'ARITH_OP_1'
-const UNARY_OP = 'UNARY_OP'
-const BASE = 'BASE'
-const FACTOR = 'FACTOR'
-const SUM = 'SUM'
-const VALUE = 'VALUE'
-const PRED = 'PRED'
-const EXPR = 'EXPR'
-const DEF = 'DEF'
-const INJECTABLE = 'INJECTABLE'
-const AXIOM = 'AXIOM'
+export const COMP_OP = 'COMP_OP'
+export const LOGIC_OP = 'LOGIC_OP'
+export const ARITH_OP_0 = 'ARITH_OP_0'
+export const ARITH_OP_1 = 'ARITH_OP_1'
+export const UNARY_OP = 'UNARY_OP'
+export const BASE = 'BASE'
+export const FACTOR = 'FACTOR'
+export const SUM = 'SUM'
+export const VALUE = 'VALUE'
+export const PRED = 'PRED'
+export const EXPR = 'EXPR'
+export const DEF = 'DEF'
+export const INJECTABLE = 'INJECTABLE'
+export const AXIOM = 'AXIOM'
 
 const compOp = (input, index) => astNodeRule(COMP_OP, disjunction(literal('>'), literal('<'), literal('>='), literal('<='), literal('=='), literal('!=')))(input, index)
 const logicOp = (input, index) => astNodeRule(LOGIC_OP, disjunction(literal('&&'), literal('||')))(input, index)
@@ -129,4 +129,40 @@ export const evaluatorHash = {
     : op == '==' ? (a, b) => a == b
     : op == '!=' ? (a, b) => a != b
     : (() => {throw new Error(`Unknown comparison operator '${op}'`)})()
+}
+
+export const getDeclaredTermTokens = tree => {
+  return getContent(tree[0])
+    .filter(({ type }) => type === DEF)
+    .map(({ content }) => content[0])
+}
+export const getDefinitionMap = tree => {
+  return new Map(getContent(tree[0])
+    .filter(({ type }) => type === DEF)
+    .map(({ content }) => [content[0], content[2]]))
+}
+export const getInjectableTermTokens = tree => {
+  return getContent(tree[0])
+    .filter(({ type }) => type === INJECTABLE)
+    .reduce((acc, { content }) => {
+      const injectableKey = getContent(content[1])
+      return [
+        ...acc,
+        ...pairs(content.slice(4)).reduce((acc, [_, token]) => [...acc, token], [content[3]])
+      ]
+    }, [])
+}
+export const getTermTokensWithinDefinition = definition => {
+  const termsWithinDefinition = []
+  const stack = [...definition.content]
+  while (stack.length) {
+    const node = stack.pop()
+    if (node.token === 'id') {
+      termsWithinDefinition.push(node)
+    }
+    if (!isTerminal(node)) {
+      stack.push(...node.content)
+    }
+  }
+  return termsWithinDefinition
 }

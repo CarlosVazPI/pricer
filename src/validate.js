@@ -3,75 +3,55 @@ import {
   getContent,
   isTerminal,
   getType,
-  getToken
+  getToken,
+  getInjectableTermTokens,
+  getDeclaredTermTokens,
+  getDefinitionMap,
+  getTermTokensWithinDefinition
 } from './parse.js'
 
-export const getDefinedTerms = tree => {
-  return getContent(tree[0])
-    .filter(definition => getType(definition) === 'DEF')
-    .map(definition => getContent(getContent(definition)[0]))
-}
-export const getDefinitions = tree => {
-  return getContent(tree[0])
-    .filter(definition => getType(definition) === 'DEF')
-    .reduce((acc, { content }) => ({ ...acc, [content[0].content]: content[2] }), {})
-}
-export const getInjectableTerms = tree => {
-  return getContent(tree[0])
-    .filter(injectable => getType(injectable) === 'INJECTABLE')
-    .reduce((acc, injectable) => {
-      const content = getContent(injectable)
-      const injectableKey = getContent(content[1])
-      return [
-        ...acc,
-        ...pairs(content.slice(4)).reduce((acc, [_, token]) => [...acc, getContent(token)], [getContent(content[3])])
-      ]
-    }, [])
-}
-
-export const getTermsWithinDefinition = definition => {
-  const termsWithinDefinition = []
-  const stack = [...getContent(definition)]
-  while (stack.length) {
-    const node = stack.pop()
-    if (getToken(node) === 'id') {
-      termsWithinDefinition.push(getContent(node))
-    }
-    if (!isTerminal(node)) {
-      stack.push(...getContent(node))
-    }
-  }
-  return termsWithinDefinition
-}
+const sortByLocation = ({ location: a }, { location: b }) => a[0] - b[0] || a[1] - b[1]
 
 export const validate = tree => {
-  const definitions = getDefinitions(tree)
-  const declaredTerms = Object.keys(definitions)
-  let termsToDefine = [...declaredTerms]
-  const injectableTerms = getInjectableTerms(tree)
-  const fullyDefinedTerms = [...injectableTerms]
-  const termsWithinDefinition = new Map(termsToDefine.map(term => [term, getTermsWithinDefinition(definitions[term])]))
-  let numberOfFullyDefinedTerms
-  while (numberOfFullyDefinedTerms != fullyDefinedTerms.length) {
-    numberOfFullyDefinedTerms = fullyDefinedTerms.length
-    const newFullyDefinedTerms = termsToDefine.filter(termToDefine => {
-      return termsWithinDefinition.get(termToDefine).every(term => fullyDefinedTerms.includes(term))
-    })
-    termsToDefine = termsToDefine.filter(term => !newFullyDefinedTerms.includes(term))
-    fullyDefinedTerms.push(...newFullyDefinedTerms)
+  const definitionMap = getDefinitionMap(tree)
+  const declaredTermTokens = getDeclaredTermTokens(tree)
+  const injectableTermTokens = getInjectableTermTokens(tree)
+  const termTokensWithinDefinition = new Map(declaredTermTokens.map(token => [token, getTermTokensWithinDefinition(definitionMap.get(token))]))
+  const unusedInjectableTermTokens = injectableTermTokens.filter(({ content }) => !declaredTermTokens.some(term => termTokensWithinDefinition.get(term).find(token => token.content === content)))
+  const injectableTerms = injectableTermTokens.map(({ content }) => content)
+  let fullyDefinedTermTokensSet = new Set(injectableTermTokens)
+  let termTokensToDefine = [
+    ...declaredTermTokens,
+    ...declaredTermTokens.map(token => termTokensWithinDefinition.get(token)).filter(({ content }) => !injectableTerms.includes(content))
+  ].flat()
+  let numberOfFullyDefinedTermTokens
+  let fullyDefinedTerms
+  while (numberOfFullyDefinedTermTokens != fullyDefinedTermTokensSet.size) {
+    numberOfFullyDefinedTermTokens = fullyDefinedTermTokensSet.size
+    fullyDefinedTerms = [...fullyDefinedTermTokensSet].map(({ content }) => content)
+    const newFullyDefinedTermTokens = declaredTermTokens
+      .filter(declaredTerm => {
+        return termTokensWithinDefinition.get(declaredTerm).every(({ content }) => fullyDefinedTerms.includes(content))
+      })
+    termTokensToDefine = termTokensToDefine.filter(term => !newFullyDefinedTermTokens.includes(term))
+    newFullyDefinedTermTokens.forEach(term => fullyDefinedTermTokensSet.add(term))
   }
-  const circularDefinitionTerms = termsToDefine.filter(term => termsWithinDefinition.get(term).includes(term))
-  const unusedInjectableTerms = injectableTerms.filter(injectTerm => !Object.keys(definitions).some(defTerm => termsWithinDefinition.get(defTerm).includes(injectTerm)))
-  const definedTerms = getDefinedTerms(tree)
+  fullyDefinedTerms = [...fullyDefinedTermTokensSet].map(({ content }) => content)
+  const duplicatedInjectableTerms = injectableTerms.filter((term, i) => injectableTerms.slice(i + 1).includes(term))
+  const duplicatedInjectableTermTokens = injectableTermTokens.filter(({ content }) => duplicatedInjectableTerms.includes(content))
+  const declaredTerms = declaredTermTokens.map(({ content }) => content)
+  const duplicatedDeclaredTerms = declaredTerms.filter((term, i) => declaredTerms.slice(i + 1).includes(term))
+  const duplicatedDeclaredTermTokens = declaredTermTokens.filter(({ content }) => duplicatedDeclaredTerms.includes(content))
+  const circularDefinitionTermTokens = declaredTermTokens.filter(term => termTokensWithinDefinition.get(term).find(({ content }) => content === term.content))
+  const undeclaredTermTokens = declaredTermTokens.map(declaredTerm => termTokensWithinDefinition.get(declaredTerm)).flat().filter(({ content }) => !fullyDefinedTerms.includes(content) && !declaredTermTokens.find(declaredTerm => declaredTerm.content === content))
+  const nonFullyDefinedTermTokens = declaredTermTokens.filter(declaredTerm => !circularDefinitionTermTokens.find(({ content }) => content === declaredTerm.content) && termTokensWithinDefinition.get(declaredTerm).some(({ content }) => !fullyDefinedTerms.includes(content)))
+
   return [
-    ...unusedInjectableTerms.map(term => ({ severity: 'warning', message: `Injectable '${term}' is unused`})),
-    ...injectableTerms.filter((term, i) => injectableTerms.slice(i + 1).includes(term)).map(term => ({ severity: 'error', message: `Injectable '${term}' is declared several times` })),
-    ...definedTerms.filter((term, i) => definedTerms.slice(i + 1).includes(term)).map(term => ({ severity: 'error', message: `Term '${term}' is declared several times` })),
-    ...circularDefinitionTerms.map(term => ({ severity: 'error', message: `Term '${term}' has a circular definition`})),
-    ...termsToDefine.map(improperlyDefinedTerm => {
-      return termsWithinDefinition.get(improperlyDefinedTerm)
-        .filter(term => !fullyDefinedTerms.includes(term))
-        .map(term => ({ severity: 'error', message: `Term '${term}' within the definition of '${improperlyDefinedTerm}' is not ${declaredTerms.includes(term) ? 'fully defined' : 'declared'}` }))
-    }).flat()
-  ]
+    ...unusedInjectableTermTokens.map(({ content, location }) => ({ location, severity: 'warning', message: `Injectable '${content}' is unused. At ${location.join(':')}`})),
+    ...duplicatedInjectableTermTokens.map(({ content, location }) => ({ location, severity: 'error', message: `Injectable '${content}' is declared several times. At ${location.join(':')}` })),
+    ...duplicatedDeclaredTermTokens.map(({ content, location }) => ({ location, severity: 'error', message: `Term '${content}' is declared several times. At ${location.join(':')}` })),
+    ...circularDefinitionTermTokens.map(({ content, location }) => ({ location, severity: 'error', message: `Term '${content}' has a circular definition. At ${location.join(':')}`})),
+    ...undeclaredTermTokens.map(({ content, location }) => ({ location, severity: 'error', message: `Term '${content}' is not declared. At ${location.join(':')}`})),
+    ...nonFullyDefinedTermTokens.map(({ content, location }) => ({ location, severity: 'error', message: `Term '${content}' is not fully defined. At ${location.join(':')}` }))
+  ].sort(sortByLocation)
 }
