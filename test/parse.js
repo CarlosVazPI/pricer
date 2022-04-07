@@ -10,10 +10,155 @@ import {
   getDeclaredTermTokens,
   getDefinitionMap,
   getTermTokensWithinDefinition,
-  parse
+  parse,
+  evaluatorHash,
+  COMP_OP,
+  LOGIC_OP,
+  ARITH_OP_0,
+  ARITH_OP_1,
+  UNARY_OP,
+  BASE,
+  FACTOR,
+  SUM,
+  VALUE,
+  PRED,
+  EXPR
 } from '../src/parse.js'
 
 describe('parse', () => {
+  describe('evaluatorHash', () => {
+    describe('COMP_OP', () => {
+      it('should evaluate >', () => {
+        assert.equal(evaluatorHash[COMP_OP]('>')(2, 1), true)
+        assert.equal(evaluatorHash[COMP_OP]('>')(1, 1), false)
+        assert.equal(evaluatorHash[COMP_OP]('>')(1, 2), false)
+      })
+      it('should evaluate >=', () => {
+        assert.equal(evaluatorHash[COMP_OP]('>=')(2, 1), true)
+        assert.equal(evaluatorHash[COMP_OP]('>=')(1, 1), true)
+        assert.equal(evaluatorHash[COMP_OP]('>=')(1, 2), false)
+      })
+      it('should evaluate <', () => {
+        assert.equal(evaluatorHash[COMP_OP]('<')(2, 1), false)
+        assert.equal(evaluatorHash[COMP_OP]('<')(1, 1), false)
+        assert.equal(evaluatorHash[COMP_OP]('<')(1, 2), true)
+      })
+      it('should evaluate <=', () => {
+        assert.equal(evaluatorHash[COMP_OP]('<=')(2, 1), false)
+        assert.equal(evaluatorHash[COMP_OP]('<=')(1, 1), true)
+        assert.equal(evaluatorHash[COMP_OP]('<=')(1, 2), true)
+      })
+      it('should evaluate ==', () => {
+        assert.equal(evaluatorHash[COMP_OP]('==')(2, 1), false)
+        assert.equal(evaluatorHash[COMP_OP]('==')(1, 1), true)
+        assert.equal(evaluatorHash[COMP_OP]('==')(1, 2), false)
+      })
+      it('should evaluate !=', () => {
+        assert.equal(evaluatorHash[COMP_OP]('!=')(2, 1), true)
+        assert.equal(evaluatorHash[COMP_OP]('!=')(1, 1), false)
+        assert.equal(evaluatorHash[COMP_OP]('!=')(1, 2), true)
+      })
+    })
+    describe('LOGIC_OP', () => {
+      it('should evaluate &&', () => {
+        assert.equal(evaluatorHash[LOGIC_OP]('&&')(true, true), true)
+        assert.equal(evaluatorHash[LOGIC_OP]('&&')(true, false), false)
+        assert.equal(evaluatorHash[LOGIC_OP]('&&')(false, true), false)
+        assert.equal(evaluatorHash[LOGIC_OP]('&&')(false, false), false)
+      })
+      it('should evaluate ||', () => {
+        assert.equal(evaluatorHash[LOGIC_OP]('||')(true, true), true)
+        assert.equal(evaluatorHash[LOGIC_OP]('||')(true, false), true)
+        assert.equal(evaluatorHash[LOGIC_OP]('||')(false, true), true)
+        assert.equal(evaluatorHash[LOGIC_OP]('||')(false, false), false)
+      })
+    })
+    describe('ARITH_OP_0', () => {
+      it('should evaluate +', () => {
+        assert.equal(evaluatorHash[ARITH_OP_0]('+')(3, 2), 5)
+      })
+      it('should evaluate -', () => {
+        assert.equal(evaluatorHash[ARITH_OP_0]('-')(3, 2), 1)
+      })
+    })
+    describe('ARITH_OP_1', () => {
+      it('should evaluate *', () => {
+        assert.equal(evaluatorHash[ARITH_OP_1]('*')(3, 2), 6)
+      })
+      it('should evaluate /', () => {
+        assert.equal(evaluatorHash[ARITH_OP_1]('/')(3, 2), 1.5)
+      })
+    })
+    describe('UNARY_OP', () => {
+      it('should evaluate !', () => {
+        assert.equal(evaluatorHash[UNARY_OP]('!')(true), false)
+        assert.equal(evaluatorHash[UNARY_OP]('!')(false), true)
+      })
+      it('should evaluate -', () => {
+        assert.equal(evaluatorHash[UNARY_OP]('-')(3), -3)
+      })
+    })
+    describe('BASE', () => {
+      it('should evaluate a boolean', () => {
+        assert.equal(evaluatorHash[BASE]('true'), true)
+        assert.equal(evaluatorHash[BASE]('false'), false)
+      })
+      it('should evaluate a number', () => {
+        assert.equal(evaluatorHash[BASE]('1234'), 1234)
+      })
+      it('should evaluate a value between parenthese', () => {
+        assert.equal(evaluatorHash[BASE]('(', 'value', ')'), 'value')
+      })
+      it('should evaluate a conditional', () => {
+        assert.equal(evaluatorHash[BASE]('if', true, 'then', 'one', 'else', 'two', 'end'), 'one')
+        assert.equal(evaluatorHash[BASE]('if', false, 'then', 'one', 'else', 'two', 'end'), 'two')
+      })
+    })
+    describe('FACTOR', () => {
+      it('should evaluate a base preceded by a unary operation', () => {
+        assert.equal(evaluatorHash[FACTOR](x => x * 2, 25), 50)
+      })
+      it('should evaluate a base', () => {
+        assert.equal(evaluatorHash[FACTOR](25), 25)
+      })
+    })
+    describe('SUM', () => {
+      it('should evaluate a single number', () => {
+        assert.equal(evaluatorHash[SUM](1), 1)
+      })
+      it('should reduce an array', () => {
+        const add = (a, b) => a + b
+        assert.equal(evaluatorHash[SUM](1, add, 1, add, 2, add, 3, add, 5, add, 8), 20)
+      })
+    })
+    describe('VALUE', () => {
+      it('should evaluate a single number', () => {
+        assert.equal(evaluatorHash[VALUE](1), 1)
+      })
+      it('should reduce an array', () => {
+        const add = (a, b) => a + b
+        assert.equal(evaluatorHash[VALUE](1, add, 1, add, 2, add, 3, add, 5, add, 8), 20)
+      })
+    })
+    describe('PRED', () => {
+      it('should evaluate a single value', () => {
+        assert.equal(evaluatorHash[PRED](1), 1)
+      })
+      it('should reduce an operation', () => {
+        const add = (a, b) => a + b
+        assert.equal(evaluatorHash[PRED](1, add, 2), 3)
+      })
+    })
+    describe('EXPR', () => {
+      it('should evaluate a single number', () => {
+        assert.equal(evaluatorHash[EXPR](1), 1)
+      })
+      it('should reduce an array', () => {
+        const add = (a, b) => a + b
+        assert.equal(evaluatorHash[EXPR](1, add, 1, add, 2, add, 3, add, 5, add, 8), 20)
+      })
+    })
+  })
   describe('getInjectableTermTokens', () => {
     it('should return the injectable terms', () => {
       assert.deepEqual(getInjectableTermTokens(parse(tokenize('$key1: a, b, c $key2: d, e, f x=a+b y=c*d'))), [{
